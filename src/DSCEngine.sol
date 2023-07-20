@@ -31,8 +31,7 @@ contract DSCEngine is ReentrancyGuard {
 
     mapping(address token => address priceFeed) private s_priceFeeds;
     //mapping (who(what => how many))collateralDeposited
-    mapping(address user => mapping(address collateraltoken => uint256 amount))
-        private s_collateralDeposited;
+    mapping(address user => mapping(address collateraltoken => uint256 amount)) private s_collateralDeposited;
 
     DecentralizedStableCoin private immutable i_dsc;
 
@@ -40,11 +39,7 @@ contract DSCEngine is ReentrancyGuard {
     // Events
     ///////////////////
 
-    event CollateralDeposited(
-        address user,
-        address tokenCollateralAddress,
-        uint256 _amountCollateral
-    );
+    event CollateralDeposited(address indexed user, address indexed token, uint256 indexed amount);
 
     ///////////////////
     // Modifiers
@@ -56,6 +51,7 @@ contract DSCEngine is ReentrancyGuard {
         }
         _;
     }
+
     modifier isAllowedToken(address token) {
         if (s_priceFeeds[token] == address(0)) {
             revert DSCEngine__NotAllowedToken();
@@ -66,11 +62,7 @@ contract DSCEngine is ReentrancyGuard {
     ///////////////////
     // Functions
     ///////////////////
-    constructor(
-        address[] memory tokenAddresses,
-        address[] memory priceFeedAddresses,
-        address dscAddress
-    ) {
+    constructor(address[] memory tokenAddresses, address[] memory priceFeedAddresses, address dscAddress) {
         if (tokenAddresses.length != priceFeedAddresses.length) {
             revert DSCEngine__TokenAddressesAndPriceFeedAddressesAmountsDontMatch();
         }
@@ -85,10 +77,7 @@ contract DSCEngine is ReentrancyGuard {
     // External Functions
     ///////////////////
 
-    function depositCollateral(
-        address tokenCollateralAddress,
-        uint256 _amountCollateral
-    )
+    function depositCollateral(address tokenCollateralAddress, uint256 _amountCollateral)
         public
         moreThanZero(_amountCollateral)
         nonReentrant
@@ -100,20 +89,10 @@ contract DSCEngine is ReentrancyGuard {
         // read from right to left.
         // increases the amount of collateral deposited by the sender (msg.sender)
         // for a specific token (tokenCollateralAddress)
-        s_collateralDeposited[msg.sender][
-            tokenCollateralAddress
-        ] += _amountCollateral;
-        emit CollateralDeposited(
-            msg.sender,
-            tokenCollateralAddress,
-            _amountCollateral
-        );
+        s_collateralDeposited[msg.sender][tokenCollateralAddress] += _amountCollateral;
+        emit CollateralDeposited(msg.sender, tokenCollateralAddress, _amountCollateral);
         // IERC20 down here is a function inherited from IERC20.sol
-        bool succes = IERC20(tokenCollateralAddress).transferFrom(
-            msg.sender,
-            address(this),
-            _amountCollateral
-        );
+        bool succes = IERC20(tokenCollateralAddress).transferFrom(msg.sender, address(this), _amountCollateral);
         if (!succes) {
             revert DSCEngine__TransferFailed();
         }

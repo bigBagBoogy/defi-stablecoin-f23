@@ -7,3 +7,4 @@ git commit -m "test added"
 git push -u origin main
 
 The keyboard shortcut to toggle word wrap is Alt+Z
+The keyboard shortcut to zoom is Ctrl+ + and/or Ctrl+ - (on the num-pad)
