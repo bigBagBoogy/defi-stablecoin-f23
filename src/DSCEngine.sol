@@ -32,7 +32,8 @@ contract DSCEngine is ReentrancyGuard {
     mapping(address token => address priceFeed) private s_priceFeeds;
     //mapping (who(what => how many))collateralDeposited
     mapping(address user => mapping(address collateraltoken => uint256 amount)) private s_collateralDeposited;
-
+    /// @dev Amount of DSC minted by user
+    mapping(address user => uint256 amount) private s_DSCMinted;
     DecentralizedStableCoin private immutable i_dsc;
 
     ///////////////////
@@ -76,7 +77,23 @@ contract DSCEngine is ReentrancyGuard {
     ///////////////////
     // External Functions
     ///////////////////
+    // CEI = checks, executions, interactions
+        /*
+     * @param amountDscToMint: The amount of DSC you want to mint
+     * You can only mint DSC if you have enough collateral (meet the minimum threshold)
+     */
+    function mintDsc(uint256 amountDscToMint) external moreThanZero(amountDscToMint) nonReentrant {
+s_DSCMinted[msg.sender] += amountDscToMint
 
+
+require they have sufficient collateral
+appoint the coins to the user
+update by emitting "minted(amount, coin, to whom)"
+    }
+     /*
+     * @param tokenCollateralAddress: The ERC20 token address of the collateral you're depositing
+     * @param amountCollateral: The amount of collateral user is depositing
+     */
     function depositCollateral(address tokenCollateralAddress, uint256 _amountCollateral)
         public
         moreThanZero(_amountCollateral)
@@ -96,5 +113,21 @@ contract DSCEngine is ReentrancyGuard {
         if (!succes) {
             revert DSCEngine__TransferFailed();
         }
+    }
+     //////////////////////////////
+    // Private & Internal View & Pure Functions
+    //////////////////////////////
+    /*
+    * Returns how close to liquidation a user is
+    * If a user goes below 1, then they can get liqidated
+    */
+function _healthFactor(address user) private view {
+// total DSC minted
+// total collateral VALUE
+}
+
+    function _revertIfHealthFactorIsBroken(address user) internal view {
+// 1. Check health factor (do they have enough collateral?)
+// 2. revert if they don't
     }
 }
