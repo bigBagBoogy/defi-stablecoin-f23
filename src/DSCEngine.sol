@@ -4,6 +4,7 @@ pragma solidity ^0.8.18;
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {DecentralizedStableCoin} from "../src/DecentralizedStableCoin.sol";
 import {ReentrancyGuard} from "@openzeppelin/contracts/security/ReentrancyGuard.sol";
+import {AggregatorV3Interface} from "@chainlink/contracts/src/v0.8/interfaces/AggregatorV3Interface.sol";
 
 /*
  * @title DecentralizedStableCoin
@@ -28,6 +29,9 @@ contract DSCEngine is ReentrancyGuard {
     ///////////////////
     // State Variables
     ///////////////////
+    uint256 private constant ADDITIONAL_FEED_PRECISION = 1e10; //adds 10 zeroes to match in WEI
+    uint256 private constant PRECISION = 1e18; //to devide by to get ETH
+
 
     mapping(address token => address priceFeed) private s_priceFeeds;
     //mapping (who(what => how many))collateralDeposited
@@ -36,6 +40,7 @@ contract DSCEngine is ReentrancyGuard {
     mapping(address user => uint256 amount) private s_DSCMinted;
     DecentralizedStableCoin private immutable i_dsc;
     address[] private s_collateralTokens; // array of all accepted tokens
+
 
     ///////////////////
     // Events
@@ -175,5 +180,13 @@ return _getUsdValue(token, amount);
             totalCollateralValueInUsd += _getUsdValue(token, amount);
         }
         return totalCollateralValueInUsd;
+    }
+    function getUsdValue(address token, uint256 amount) public view returns(uint256) {
+        AggregatorV3Interface pricefeed = AggregatorV3Interface(s_priceFeeds[token]);
+        (,int256 price,,,) = priceFeed.latestRoundData(); //returns 5 things, but we only care about the price...Notice it returns an int256, not a uint256!
+        // lets say 1 ETH = $1000,
+        // The returned value by Chainlink will be 1000 * 10e8
+        return (uint256(price) * ADDITIONAL_FEED_PRECISION * amount) / PRECISION // 1000 * 1e8 * 1e10 <- now this has 18 decimals, same as "amount", because "amount" is in Wei.   We then devide it by 1e18 go get "whole" Eth
+        // Notice we cast price as a uint256 by using the parentheses.
     }
 }
