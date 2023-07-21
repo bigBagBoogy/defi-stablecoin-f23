@@ -150,7 +150,7 @@ contract DSCEngine is ReentrancyGuard {
     * Returns how close to liquidation a user is (by means of a ratio)
     * If a user goes below 1, then they can get liqidated
     */
-    function _healthFactor(address user) private view {
+    function _healthFactor(address user) private view returns (uint256) {
         // need get total DSC minted
         // need get total collateral VALUE
         (uint256 totalDscMinted, uint256 collateralValueInUsd) = _getAccountInformation(user);
@@ -173,11 +173,6 @@ contract DSCEngine is ReentrancyGuard {
     // External & Public View & Pure Functions
     ////////////////////////////////////////////////////////////////////////////
 
-    //there's a _getUsdValue AND a getUsdValue function (without underscore).
-    // a helper function used internally within the contract to calculate a value, while getUsdValue might be a function designed to provide the calculated USD value to external callers (a public getter function).
-    function getUsdValue(address token, uint256 amount /* in WEI*/ ) external view returns (uint256) {
-        return _getUsdValue(token, amount);
-    }
     // Since users need to be able to call this themselves, it's public.
 
     function getAccountCollateralValue(address user) public view returns (uint256 totalCollateralValueInUsd) {
@@ -187,10 +182,12 @@ contract DSCEngine is ReentrancyGuard {
         for (uint256 i = 0; i < s_collateralTokens.length; i++) {
             address token = s_collateralTokens[i]; //get token
             uint256 amount = s_collateralDeposited[user][token]; //look up the amount of tokens they deposited in the s_collateralDeposited mapping.
-            totalCollateralValueInUsd += getUsdValue(token, amount);
+            totalCollateralValueInUsd += _getUsdValue(token, amount);
         }
         return totalCollateralValueInUsd;
     }
+    //there's a _getUsdValue AND a getUsdValue function (without underscore).
+    // a helper function used internally within the contract to calculate a value, while getUsdValue might be a function designed to provide the calculated USD value to external callers (a public getter function).
 
     function getUsdValue(address token, uint256 amount) public view returns (uint256) {
         AggregatorV3Interface priceFeed = AggregatorV3Interface(s_priceFeeds[token]);
@@ -199,5 +196,5 @@ contract DSCEngine is ReentrancyGuard {
         // The returned value by Chainlink will be 1000 * 10e8
         return (uint256(price) * ADDITIONAL_FEED_PRECISION * amount) / PRECISION; // 1000 * 1e8 * 1e10 <- now this has 18 decimals, same as "amount", because "amount" is in Wei.   We then devide it by 1e18 go get "whole" USD
             // Notice we cast price as a uint256 by using the parentheses.
-    }
+    } // Since users need to be able to call this themselves, it's public.
 }
