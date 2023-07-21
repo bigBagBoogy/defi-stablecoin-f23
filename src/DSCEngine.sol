@@ -26,12 +26,16 @@ contract DSCEngine is ReentrancyGuard {
     error DSCEngine__onlyWETHorWBTCAllowed();
     error DSCEngine__TransferFailed();
     error DSCEngine__NotAllowedToken();
+    error DSCEngine__BreaksHealthFactor(uint256 userHealthFactor);
     ///////////////////
     // State Variables
     ///////////////////
+
     uint256 private constant ADDITIONAL_FEED_PRECISION = 1e10; //adds 10 zeroes to match in WEI
     uint256 private constant PRECISION = 1e18; //to devide by to get ETH
-
+    uint256 private constant LIQUIDATION_THRESHOLD = 50; // This means you need to be 200% over-collateralized
+    uint256 private constant LIQUIDATION_PRECISION = 100;
+    uint256 private constant MIN_HEALTH_FACTOR = 1;
 
     mapping(address token => address priceFeed) private s_priceFeeds;
     //mapping (who(what => how many))collateralDeposited
@@ -40,7 +44,6 @@ contract DSCEngine is ReentrancyGuard {
     mapping(address user => uint256 amount) private s_DSCMinted;
     DecentralizedStableCoin private immutable i_dsc;
     address[] private s_collateralTokens; // array of all accepted tokens
-
 
     ///////////////////
     // Events
@@ -85,22 +88,23 @@ contract DSCEngine is ReentrancyGuard {
     // External Functions
     ///////////////////
     // CEI = checks, executions, interactions
-        /*
+    /*
      * @param amountDscToMint: The amount of DSC you want to mint
      * You can only mint DSC if you have enough collateral (meet the minimum threshold)
      */
     function mintDsc(uint256 amountDscToMint) external moreThanZero(amountDscToMint) nonReentrant {
-s_DSCMinted[msg.sender] += amountDscToMint
-//If they minted too much (DSC $150, ETH $100)
-_revertIfHealthFactorIsBroken(msg.sender);
-//require they have sufficient collateral
-//appoint the coins to the user.
-//update by emitting "minted(amount, coin, to whom)"
+        s_DSCMinted[msg.sender] += amountDscToMint;
+        //If they minted too much (DSC $150, ETH $100)
+        _revertIfHealthFactorIsBroken(msg.sender);
+        //require they have sufficient collateral
+        //appoint the coins to the user.
+        //update by emitting "minted(amount, coin, to whom)"
     }
-     /*
+    /*
      * @param tokenCollateralAddress: The ERC20 token address of the collateral you're depositing
      * @param amountCollateral: The amount of collateral user is depositing
      */
+
     function depositCollateral(address tokenCollateralAddress, uint256 _amountCollateral)
         public
         moreThanZero(_amountCollateral)
@@ -121,72 +125,79 @@ _revertIfHealthFactorIsBroken(msg.sender);
             revert DSCEngine__TransferFailed();
         }
     }
-///////////////////
+    ///////////////////
     // Public Functions
     ///////////////////
 
- ///////////////////
+    ///////////////////
     // Private Functions
     ///////////////////
 
-
-     //////////////////////////////
+    //////////////////////////////
     // Private & Internal View & Pure Functions
     // Internal _functions _get a _leading _underscore!!!
     //////////////////////////////
-function _getAccountInformation(address user) private view returns (uint256 totalDscMinted, uint256 collateralValueInUsd) {
-totalDscMinted = s_DSCMinted[user]; // pass in user as a key to the totalDscMinted value in the s_DSCMinted mapping.
-collateralValueInUsd = getAccountCollateralValue(user);
-}
+    function _getAccountInformation(address user)
+        private
+        view
+        returns (uint256 totalDscMinted, uint256 collateralValueInUsd)
+    {
+        totalDscMinted = s_DSCMinted[user]; // pass in user as a key to the totalDscMinted value in the s_DSCMinted mapping.
+        collateralValueInUsd = getAccountCollateralValue(user);
+    }
 
     /*
-    * Returns how close to liquidation a user is
+    * Returns how close to liquidation a user is (by means of a ratio)
     * If a user goes below 1, then they can get liqidated
     */
-function _healthFactor(address user) private view {
-// need get total DSC minted
-// need get total collateral VALUE
-(uint256 totalDscMinted, uint256 collateralValueInUsd) = _getAccountInformation(user);
-}
+    function _healthFactor(address user) private view {
+        // need get total DSC minted
+        // need get total collateral VALUE
+        (uint256 totalDscMinted, uint256 collateralValueInUsd) = _getAccountInformation(user);
+        uint256 collateralAdjustedForThreshold = (collateralValueInUsd * LIQUIDATION_THRESHOLD) / LIQUIDATION_PRECISION; // in the case collateralValueInUsd = 1000,  -> 1000*50   /100   = 500
+        return (collateralAdjustedForThreshold * PRECISION) / totalDscMinted;
+        // so if above totalDscMinted = 200, the healthfactor would be: 500 / 200 = 2.5
+        // the "* PRECISION" part is just there to match the totalDscMinted by multiplying by 10e18
+    }
 
-
-function _getUsdValue(address token, uint amount) private view returns (uint256) {
-
-}
+    function _getUsdValue(address token, uint256 amount) private view returns (uint256) {}
 
     function _revertIfHealthFactorIsBroken(address user) internal view {
-// 1. Check health factor (do they have enough collateral?)
-// 2. revert if they don't
-(uint256 totalDscMinted,/*debt*/ uint256 collateralValueInUsd) = getAccountInformation(user);
+        // 1. Check health factor (do they have enough collateral?)
+        // 2. revert if they don't
+        uint256 userHealthFactor = _healthFactor(user);
+        if (userHealthFactor < MIN_HEALTH_FACTOR) revert DSCEngine__BreaksHealthFactor(userHealthFactor);
     }
-        ////////////////////////////////////////////////////////////////////////////
+    ////////////////////////////////////////////////////////////////////////////
     ////////////////////////////////////////////////////////////////////////////
     // External & Public View & Pure Functions
     ////////////////////////////////////////////////////////////////////////////
 
-//there's a _getUsdValue AND a getUsdValue function (without underscore).
-// a helper function used internally within the contract to calculate a value, while getUsdValue might be a function designed to provide the calculated USD value to external callers (a public getter function).
-    function getUsdValue(address token, uint256 amount /* in WEI*/) external view returns (uint256) {
-return _getUsdValue(token, amount);
+    //there's a _getUsdValue AND a getUsdValue function (without underscore).
+    // a helper function used internally within the contract to calculate a value, while getUsdValue might be a function designed to provide the calculated USD value to external callers (a public getter function).
+    function getUsdValue(address token, uint256 amount /* in WEI*/ ) external view returns (uint256) {
+        return _getUsdValue(token, amount);
     }
-// Since users need to be able to call this themselves, it's public.
-    function getAccountCollateralValue(address user) public view returns(uint256 totalCollateralValueInUsd) {
-        // loop through each collateral token in the s_collateralDeposited mapping,  
+    // Since users need to be able to call this themselves, it's public.
+
+    function getAccountCollateralValue(address user) public view returns (uint256 totalCollateralValueInUsd) {
+        // loop through each collateral token in the s_collateralDeposited mapping,
         // get the amount they have deposited, "deconstruct the elements..."
-        // and map it to the price, to get the USD value. I would say 
-        for(uint256 i = 0; i < s_collateralTokens.length; i++) {
+        // and map it to the price, to get the USD value. I would say
+        for (uint256 i = 0; i < s_collateralTokens.length; i++) {
             address token = s_collateralTokens[i]; //get token
-            uint256 amount = s_collateralDeposited[amount][token]; //look up the amount of tokens they deposited in the s_collateralDeposited mapping.
-            totalCollateralValueInUsd += _getUsdValue(token, amount);
+            uint256 amount = s_collateralDeposited[user][token]; //look up the amount of tokens they deposited in the s_collateralDeposited mapping.
+            totalCollateralValueInUsd += getUsdValue(token, amount);
         }
         return totalCollateralValueInUsd;
     }
-    function getUsdValue(address token, uint256 amount) public view returns(uint256) {
-        AggregatorV3Interface pricefeed = AggregatorV3Interface(s_priceFeeds[token]);
-        (,int256 price,,,) = priceFeed.latestRoundData(); //returns 5 things, but we only care about the price...Notice it returns an int256, not a uint256!
+
+    function getUsdValue(address token, uint256 amount) public view returns (uint256) {
+        AggregatorV3Interface priceFeed = AggregatorV3Interface(s_priceFeeds[token]);
+        (, int256 price,,,) = priceFeed.latestRoundData(); //returns 5 things, but we only care about the price...Notice it returns an int256, not a uint256!
         // lets say 1 ETH = $1000,
         // The returned value by Chainlink will be 1000 * 10e8
-        return (uint256(price) * ADDITIONAL_FEED_PRECISION * amount) / PRECISION // 1000 * 1e8 * 1e10 <- now this has 18 decimals, same as "amount", because "amount" is in Wei.   We then devide it by 1e18 go get "whole" Eth
-        // Notice we cast price as a uint256 by using the parentheses.
+        return (uint256(price) * ADDITIONAL_FEED_PRECISION * amount) / PRECISION; // 1000 * 1e8 * 1e10 <- now this has 18 decimals, same as "amount", because "amount" is in Wei.   We then devide it by 1e18 go get "whole" USD
+            // Notice we cast price as a uint256 by using the parentheses.
     }
 }
