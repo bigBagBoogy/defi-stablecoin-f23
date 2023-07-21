@@ -35,6 +35,7 @@ contract DSCEngine is ReentrancyGuard {
     /// @dev Amount of DSC minted by user
     mapping(address user => uint256 amount) private s_DSCMinted;
     DecentralizedStableCoin private immutable i_dsc;
+    address[] private s_collateralTokens; // array of all accepted tokens
 
     ///////////////////
     // Events
@@ -69,6 +70,7 @@ contract DSCEngine is ReentrancyGuard {
         }
         for (uint256 i = 0; i < tokenAddresses.length; i++) {
             s_priceFeeds[tokenAddresses[i]] = priceFeedAddresses[i];
+            s_collateralTokens.push(tokenAddresses[i]);
         }
         // after the constructor finishes, set the tokenContract address
         i_dsc = DecentralizedStableCoin(dscAddress);
@@ -128,7 +130,7 @@ _revertIfHealthFactorIsBroken(msg.sender);
     // Internal _functions _get a _leading _underscore!!!
     //////////////////////////////
 function _getAccountInformation(address user) private view returns (uint256 totalDscMinted, uint256 collateralValueInUsd) {
-totalDscMinted = s_DSCMinted[user];
+totalDscMinted = s_DSCMinted[user]; // pass in user as a key to the totalDscMinted value in the s_DSCMinted mapping.
 collateralValueInUsd = getAccountCollateralValue(user);
 }
 
@@ -162,14 +164,14 @@ function _getUsdValue(address token, uint amount) private view returns (uint256)
     function getUsdValue(address token, uint256 amount /* in WEI*/) external view returns (uint256) {
 return _getUsdValue(token, amount);
     }
-
+// Since users need to be able to call this themselves, it's public.
     function getAccountCollateralValue(address user) public view returns(uint256 totalCollateralValueInUsd) {
         // loop through each collateral token in the s_collateralDeposited mapping,  
         // get the amount they have deposited, "deconstruct the elements..."
         // and map it to the price, to get the USD value. I would say 
-        for(uint256 i = 0; i < s_collateralDeposited.length; i++) {
-            address token = s_collateralDeposited[i]; //get token
-            uint256 amount = s_collateralDeposited[amount][token]; //of the token get the amt.
+        for(uint256 i = 0; i < s_collateralTokens.length; i++) {
+            address token = s_collateralTokens[i]; //get token
+            uint256 amount = s_collateralDeposited[amount][token]; //look up the amount of tokens they deposited in the s_collateralDeposited mapping.
             totalCollateralValueInUsd += _getUsdValue(token, amount);
         }
         return totalCollateralValueInUsd;
