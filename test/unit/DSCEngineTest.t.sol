@@ -29,12 +29,12 @@ contract DSCEngineTest is Test {
     //////////////////
 
     function testGetUsdValue() public {
-        //Checks, Effects integra
+        // CEI Checks, Effects, Interactions
         // we have 15eth with a value of 30k
         // if we call the getUsdValue and pass it the token and amount, it should return 30k
-        uint256 initialEthValue = 30000e18; // ethAmount = 15e18   15* $2000 = 30.000
-        uint256 returnedEthValue = dsce.getUsdValue(weth, 15e18);
-        console.log(returnedEthValue);
-        assertEq(initialEthValue, returnedEthValue);
+        uint256 expectedUsd = 30000e18; // ethAmount = 15e18   15* $2000 = 30.000
+        uint256 actualUsd = dsce.getUsdValue(weth, 15e18);
+        console.log(actualUsd);
+        assertEq(expectedUsd, actualUsd);
     }
 }
