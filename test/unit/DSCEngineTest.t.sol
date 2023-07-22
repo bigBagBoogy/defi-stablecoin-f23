@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.18;
 
-import {Test} from "forge-std/Test.sol";
+import {Test, console} from "forge-std/Test.sol";
 import {DeployDSC} from "../../script/DeployDSC.s.sol";
 import {DecentralizedStableCoin} from "../../src/DecentralizedStableCoin.sol";
 import {DSCEngine} from "../../src/DSCEngine.sol";
@@ -16,7 +16,7 @@ contract DSCEngineTest is Test {
     address ethUsdPriceFeed;
     address weth;
 
-    function setup() external {
+    function setUp() external {
         deployer = new DeployDSC(); // we run the deploy script which will run the HelperConfig(), DecentralizedStableCoin(), and the DSCEngine().
         (dsc, dsce, helperConfig) = deployer.run(); //running deploy will return (dsc, dsce, helperConfig) objects. (DecentralizedStableCoin, DSCEngine, HelperConfig)
         (ethUsdPriceFeed,, weth,,) = helperConfig.activeNetworkConfig();
@@ -28,5 +28,13 @@ contract DSCEngineTest is Test {
     // price tests ////
     //////////////////
 
-    function testGetUsdValue() public {}
+    function testGetUsdValue() public {
+        //Checks, Effects integra
+        // we have 15eth with a value of 30k
+        // if we call the getUsdValue and pass it the token and amount, it should return 30k
+        uint256 initialEthValue = 30000e18; // ethAmount = 15e18   15* $2000 = 30.000
+        uint256 returnedEthValue = dsce.getUsdValue(weth, 15e18);
+        console.log(returnedEthValue);
+        assertEq(initialEthValue, returnedEthValue);
+    }
 }
