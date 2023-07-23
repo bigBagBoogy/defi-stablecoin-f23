@@ -68,4 +68,15 @@ function testGetsAccountCollateralValue() public {
 
 }
     function testCalculatesHealthFactorCorrectly() public {}
+
+       //////////////////
+    // Price Tests //
+    //////////////////
+
+    function testGetTokenAmountFromUsd() public {
+        // If we want $100 of WETH @ $2000/WETH, that would be 0.05 WETH
+        uint256 expectedWeth = 0.05 ether; // this ether here is Ethereum ether
+        uint256 amountWeth = dsce.getTokenAmountFromUsd(weth, 100 ether); // 100 ether here is $100 worth of the 1 - 1 stablecoins (called "ether" here) and this is not 100 ETH!!!!
+        assertEq(amountWeth, expectedWeth);
+    }
 }
