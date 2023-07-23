@@ -15,8 +15,11 @@ contract DSCEngineTest is Test {
     HelperConfig public helperConfig;
     address ethUsdPriceFeed;
     address weth;
+
     address public USER = makeAddr("user");
     uint256 public constant AMOUNT_COLLATERAL = 10 ether;
+    uint256 public constant STARTING_ERC20_BALANCE = 10 ether;
+
 
     function setUp() external {
         deployer = new DeployDSC(); // we run the deploy script which will run the HelperConfig(), DecentralizedStableCoin(), and the DSCEngine().
@@ -45,9 +48,24 @@ contract DSCEngineTest is Test {
 
     function testRevertsIfCollateralZero() public {
         vm.startPrank(USER);
-        ERC20Mock(weth).approve(address(dsce), AMOUNT_COLLATERAL); // address(dsce) is owner here.
+        ERC20Mock(weth).approve(address(dsce), AMOUNT_COLLATERAL); // address(dsce) is owner here. So the DSCEnging contract = owner.
         vm.expectRevert(DSCEngine.DSCEngine__needsMoreThanZero.selector);
         dsce.depositCollateral(weth, 0);
         vm.stopPrank;
     }
+function testGetsAccountCollateralValue() public {
+    uint256 expectedCollateralUsd = 20000e18;
+    vm.startPrank(USER);
+    ERC20Mock(weth).approve(address(dsce), AMOUNT_COLLATERAL);
+    dsce.depositCollateral(weth, 10e18);
+    dsce.getAccountCollateralValue()
+
+
+
+
+
+
+
+}
+    function testCalculatesHealthFactorCorrectly() public {}
 }

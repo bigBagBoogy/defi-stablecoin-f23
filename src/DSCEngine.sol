@@ -27,6 +27,7 @@ contract DSCEngine is ReentrancyGuard {
     error DSCEngine__TransferFailed();
     error DSCEngine__NotAllowedToken();
     error DSCEngine__BreaksHealthFactor(uint256 userHealthFactor);
+    error DSCEngine__MintFailed();
     ///////////////////
     // State Variables
     ///////////////////
@@ -88,17 +89,28 @@ contract DSCEngine is ReentrancyGuard {
     // External Functions
     ///////////////////
     // CEI = checks, executions, interactions
+    function depositCollateralAndMintDsc(
+        address tokenCollateralAddress,
+        uint256 _amountCollateral,
+        uint256 amountDscToMint
+    ) external {
+        depositCollateral(tokenCollateralAddress, _amountCollateral);
+        mintDsc(amountDscToMint);
+    }
     /*
      * @param amountDscToMint: The amount of DSC you want to mint
      * You can only mint DSC if you have enough collateral (meet the minimum threshold)
      */
-    function mintDsc(uint256 amountDscToMint) external moreThanZero(amountDscToMint) nonReentrant {
-        s_DSCMinted[msg.sender] += amountDscToMint;
-        //If they minted too much (DSC $150, ETH $100)
-        _revertIfHealthFactorIsBroken(msg.sender);
+
+    function mintDsc(uint256 amountDscToMint) public moreThanZero(amountDscToMint) nonReentrant {
+        s_DSCMinted[msg.sender] += amountDscToMint; //this line updates the s_DSCMinted mapping
+        _revertIfHealthFactorIsBroken(msg.sender); //If they minted too much (DSC $150, ETH $100)
         //require they have sufficient collateral
         //appoint the coins to the user.
-        //update by emitting "minted(amount, coin, to whom)"
+        bool minted = i_dsc.mint(msg.sender, amountDscToMint);
+        if (minted != true) {
+            revert DSCEngine__MintFailed();
+        } // no event emit needed here. We update s_DSCMinted internally by saying: s_DSCMinted[msg.sender] += amountDscToMint;
     }
     /*
      * @param tokenCollateralAddress: The ERC20 token address of the collateral you're depositing
@@ -180,7 +192,7 @@ contract DSCEngine is ReentrancyGuard {
         // get the amount they have deposited, "deconstruct the elements..."
         // and map it to the price, to get the USD value. I would say
         for (uint256 i = 0; i < s_collateralTokens.length; i++) {
-            address token = s_collateralTokens[i]; //get token
+            address token = s_collateralTokens[i]; //get tokens
             uint256 amount = s_collateralDeposited[user][token]; //look up the amount of tokens they deposited in the s_collateralDeposited mapping.
             totalCollateralValueInUsd += _getUsdValue(token, amount);
         }
