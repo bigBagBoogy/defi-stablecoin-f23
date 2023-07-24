@@ -20,7 +20,6 @@ contract DSCEngineTest is Test {
     uint256 public constant AMOUNT_COLLATERAL = 10 ether;
     uint256 public constant STARTING_ERC20_BALANCE = 10 ether;
 
-
     function setUp() external {
         deployer = new DeployDSC(); // we run the deploy script which will run the HelperConfig(), DecentralizedStableCoin(), and the DSCEngine().
         (dsc, dsce, helperConfig) = deployer.run(); //running deploy will return (dsc, dsce, helperConfig) objects. (DecentralizedStableCoin, DSCEngine, HelperConfig)
@@ -53,23 +52,18 @@ contract DSCEngineTest is Test {
         dsce.depositCollateral(weth, 0);
         vm.stopPrank;
     }
-function testGetsAccountCollateralValue() public {
-    uint256 expectedCollateralUsd = 20000e18;
-    vm.startPrank(USER);
-    ERC20Mock(weth).approve(address(dsce), AMOUNT_COLLATERAL);
-    dsce.depositCollateral(weth, 10e18);
-    dsce.getAccountCollateralValue()
 
+    function testGetsAccountCollateralValue() public {
+        uint256 expectedCollateralUsd = 20000e18;
+        vm.startPrank(USER);
+        ERC20Mock(weth).approve(address(dsce), AMOUNT_COLLATERAL);
+        dsce.depositCollateral(weth, 10e18);
+        dsce.getAccountCollateralValue();
+    }
 
-
-
-
-
-
-}
     function testCalculatesHealthFactorCorrectly() public {}
 
-       //////////////////
+    //////////////////
     // Price Tests //
     //////////////////
 
