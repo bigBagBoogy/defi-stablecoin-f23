@@ -9,6 +9,8 @@ git push -u origin main
 The keyboard shortcut to toggle word wrap is Alt+Z
 The keyboard shortcut to zoom is Ctrl+ + and/or Ctrl+ - (on the num-pad)
 
+forge test --mt <nameOfTest> -vvv
+
 # bigBagBoogie interim note:
 
 As of now, when still working on the code, I can see no event being emitted for the

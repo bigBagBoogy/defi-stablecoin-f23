@@ -1,11 +1,10 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.18;
 
+import {OracleLib, AggregatorV3Interface} from "libraries/OracleLib.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {DecentralizedStableCoin} from "../src/DecentralizedStableCoin.sol";
 import {ReentrancyGuard} from "@openzeppelin/contracts/security/ReentrancyGuard.sol";
-import {AggregatorV3Interface} from "@chainlink/contracts/src/v0.8/interfaces/AggregatorV3Interface.sol";
-//import {OracleLib, AggregatorV3Interface} from "./libraries/OracleLib.sol";
 
 /*
  * @title DecentralizedStableCoin
@@ -266,14 +265,17 @@ contract DSCEngine is ReentrancyGuard {
     // External & Public View & Pure Functions                         /////////
     ////////////////////////////////////////////////////////////////////////////
 
-    // Since users need to be able to call this themselves, it's public.
+    function getCollateralBalanceOfUser(address user, address token) external view returns (uint256) {
+        return s_collateralDeposited[user][token]; // just returns the mapping
+    }
 
+    // Since users need to be able to call this themselves, it's public.
     function getAccountCollateralValue(address user) public view returns (uint256 totalCollateralValueInUsd) {
         // loop through each collateral token in the s_collateralDeposited mapping,
         // get the amount they have deposited, "deconstruct the elements..."
         // and map it to the price, to get the USD value. I would say
         for (uint256 i = 0; i < s_collateralTokens.length; i++) {
-            address token = s_collateralTokens[i]; //get tokens
+            address token = s_collateralTokens[i]; //get all their tokens
             uint256 amount = s_collateralDeposited[user][token]; //look up the amount of tokens they deposited in the s_collateralDeposited mapping.
             totalCollateralValueInUsd += _getUsdValue(token, amount);
         }

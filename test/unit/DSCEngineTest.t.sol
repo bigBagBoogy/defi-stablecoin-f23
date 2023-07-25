@@ -7,8 +7,9 @@ import {DecentralizedStableCoin} from "../../src/DecentralizedStableCoin.sol";
 import {DSCEngine} from "../../src/DSCEngine.sol";
 import {HelperConfig} from "../../script/HelperConfig.s.sol";
 import {ERC20Mock} from "@openzeppelin/contracts/mocks/ERC20Mock.sol";
+import {StdCheats} from "forge-std/StdCheats.sol";
 
-contract DSCEngineTest is Test {
+contract DSCEngineTest is StdCheats, Test {
     DeployDSC deployer;
     DecentralizedStableCoin dsc;
     DSCEngine dsce;
@@ -19,11 +20,15 @@ contract DSCEngineTest is Test {
     address public USER = makeAddr("user");
     uint256 public constant AMOUNT_COLLATERAL = 10 ether;
     uint256 public constant STARTING_ERC20_BALANCE = 10 ether;
+    uint256 public constant STARTING_USER_BALANCE = 10 ether;
 
     function setUp() external {
         deployer = new DeployDSC(); // we run the deploy script which will run the HelperConfig(), DecentralizedStableCoin(), and the DSCEngine().
         (dsc, dsce, helperConfig) = deployer.run(); //running deploy will return (dsc, dsce, helperConfig) objects. (DecentralizedStableCoin, DSCEngine, HelperConfig)
         (ethUsdPriceFeed,, weth,,) = helperConfig.activeNetworkConfig();
+        if (block.chainid == 31337) {
+            vm.deal(USER, STARTING_USER_BALANCE);
+        }
         /**
          * @dev: (ethUsdPriceFeed, ,weth, ,) contains 4 commas. The 1st is an actual comma, the 2nd is "wbtcUsdPriceFeed" the 3rd is "wbtc" and the 4th is "deployerKey".
          */
@@ -33,12 +38,14 @@ contract DSCEngineTest is Test {
     //////////////////
 
     function testGetUsdValue() public {
+        uint256 ethAmount = 15e18; // but really it's Ethereum-WEI
         // CEI Checks, Effects, Interactions
         // we have 15eth with a value of 30k
         // if we call the getUsdValue and pass it the token and amount, it should return 30k
-        uint256 expectedUsd = 30000e18; // ethAmount = 15e18   15* $2000 = 30.000
-        uint256 actualUsd = dsce.getUsdValue(weth, 15e18);
-        console.log(actualUsd);
+        uint256 expectedUsd = 30000e18; // 15* $2000 = 30.000 30000e18 in DCSE-WEI
+        uint256 actualUsd = dsce.getUsdValue(weth, ethAmount);
+        console.log("amount of Ethereum-WEI:", ethAmount);
+        console.log("actualUsd:", actualUsd);
         assertEq(expectedUsd, actualUsd);
     }
     /////////////////////////////////
@@ -53,12 +60,56 @@ contract DSCEngineTest is Test {
         vm.stopPrank;
     }
 
-    function testGetsAccountCollateralValue() public {
-        uint256 expectedCollateralUsd = 20000e18;
+    /* @dev: I pasted the ERC20.sol _approve function here to get some insight
+    *    function _approve(
+        address owner,
+        address spender,
+        uint256 amount
+    ) internal virtual {
+        require(owner != address(0), "ERC20: approve from the zero address");
+        require(spender != address(0), "ERC20: approve to the zero address");
+
+        _allowances[owner][spender] = amount;
+        emit Approval(owner, spender, amount);
+    }*/
+
+    function testGetCollateralBalanceOfUser() public {
         vm.startPrank(USER);
         ERC20Mock(weth).approve(address(dsce), AMOUNT_COLLATERAL);
-        dsce.depositCollateral(weth, 10e18);
-        dsce.getAccountCollateralValue();
+        dsce.depositCollateral(weth, AMOUNT_COLLATERAL);
+        vm.stopPrank();
+        uint256 collateralBalance = dsce.getCollateralBalanceOfUser(USER, weth);
+        assertEq(collateralBalance, AMOUNT_COLLATERAL);
+    }
+
+    // below an AI generated test
+    function testGetCollateralBalanceOfUserAi() public {
+        vm.startPrank(USER);
+        ERC20Mock(weth).approve(address(dsce), AMOUNT_COLLATERAL);
+
+        // Check user's initial balance
+        uint256 initialBalance = ERC20Mock(weth).balanceOf(USER);
+        console.log(initialBalance);
+        require(initialBalance >= AMOUNT_COLLATERAL, "Insufficient balance for deposit");
+
+        dsce.depositCollateral(weth, AMOUNT_COLLATERAL);
+
+        // Verify that the user's balance has been reduced after the deposit
+        uint256 finalBalance = ERC20Mock(weth).balanceOf(USER);
+        assertEq(finalBalance, initialBalance - AMOUNT_COLLATERAL);
+
+        uint256 collateralBalance = dsce.getCollateralBalanceOfUser(USER, weth);
+        assertEq(collateralBalance, AMOUNT_COLLATERAL);
+    }
+
+    function testGetAccountCollateralValue() public {
+        vm.startPrank(USER);
+        ERC20Mock(weth).approve(address(dsce), AMOUNT_COLLATERAL);
+        dsce.depositCollateral(weth, AMOUNT_COLLATERAL);
+        vm.stopPrank();
+        uint256 collateralValue = dsce.getAccountCollateralValue(USER);
+        uint256 expectedCollateralValue = dsce.getUsdValue(weth, AMOUNT_COLLATERAL);
+        assertEq(collateralValue, expectedCollateralValue);
     }
 
     function testCalculatesHealthFactorCorrectly() public {}
