@@ -17,7 +17,7 @@ contract DSCEngineTest is StdCheats, Test {
     address ethUsdPriceFeed;
     address weth;
 
-    address public USER = makeAddr("user");
+    address public user = address(1);
     uint256 public constant AMOUNT_COLLATERAL = 10 ether;
     uint256 public constant STARTING_ERC20_BALANCE = 10 ether;
     uint256 public constant STARTING_USER_BALANCE = 10 ether;
@@ -27,7 +27,7 @@ contract DSCEngineTest is StdCheats, Test {
         (dsc, dsce, helperConfig) = deployer.run(); //running deploy will return (dsc, dsce, helperConfig) objects. (DecentralizedStableCoin, DSCEngine, HelperConfig)
         (ethUsdPriceFeed,, weth,,) = helperConfig.activeNetworkConfig();
         if (block.chainid == 31337) {
-            vm.deal(USER, STARTING_USER_BALANCE);
+            vm.deal(user, STARTING_USER_BALANCE);
         }
         /**
          * @dev: (ethUsdPriceFeed, ,weth, ,) contains 4 commas. The 1st is an actual comma, the 2nd is "wbtcUsdPriceFeed" the 3rd is "wbtc" and the 4th is "deployerKey".
@@ -53,7 +53,7 @@ contract DSCEngineTest is StdCheats, Test {
     ///////////////////////////////
 
     function testRevertsIfCollateralZero() public {
-        vm.startPrank(USER);
+        vm.startPrank(user);
         ERC20Mock(weth).approve(address(dsce), AMOUNT_COLLATERAL); // address(dsce) is owner here. So the DSCEnging contract = owner.
         vm.expectRevert(DSCEngine.DSCEngine__needsMoreThanZero.selector);
         dsce.depositCollateral(weth, 0);
@@ -74,40 +74,40 @@ contract DSCEngineTest is StdCheats, Test {
     }*/
 
     function testGetCollateralBalanceOfUser() public {
-        vm.startPrank(USER);
+        vm.startPrank(user);
         ERC20Mock(weth).approve(address(dsce), AMOUNT_COLLATERAL);
         dsce.depositCollateral(weth, AMOUNT_COLLATERAL);
         vm.stopPrank();
-        uint256 collateralBalance = dsce.getCollateralBalanceOfUser(USER, weth);
+        uint256 collateralBalance = dsce.getCollateralBalanceOfUser(user, weth);
         assertEq(collateralBalance, AMOUNT_COLLATERAL);
     }
 
     // below an AI generated test
     function testGetCollateralBalanceOfUserAi() public {
-        vm.startPrank(USER);
+        vm.startPrank(user);
         ERC20Mock(weth).approve(address(dsce), AMOUNT_COLLATERAL);
 
         // Check user's initial balance
-        uint256 initialBalance = ERC20Mock(weth).balanceOf(USER);
+        uint256 initialBalance = ERC20Mock(weth).balanceOf(user);
         console.log(initialBalance);
         require(initialBalance >= AMOUNT_COLLATERAL, "Insufficient balance for deposit");
 
         dsce.depositCollateral(weth, AMOUNT_COLLATERAL);
 
         // Verify that the user's balance has been reduced after the deposit
-        uint256 finalBalance = ERC20Mock(weth).balanceOf(USER);
+        uint256 finalBalance = ERC20Mock(weth).balanceOf(user);
         assertEq(finalBalance, initialBalance - AMOUNT_COLLATERAL);
 
-        uint256 collateralBalance = dsce.getCollateralBalanceOfUser(USER, weth);
+        uint256 collateralBalance = dsce.getCollateralBalanceOfUser(user, weth);
         assertEq(collateralBalance, AMOUNT_COLLATERAL);
     }
 
     function testGetAccountCollateralValue() public {
-        vm.startPrank(USER);
+        vm.startPrank(user);
         ERC20Mock(weth).approve(address(dsce), AMOUNT_COLLATERAL);
         dsce.depositCollateral(weth, AMOUNT_COLLATERAL);
         vm.stopPrank();
-        uint256 collateralValue = dsce.getAccountCollateralValue(USER);
+        uint256 collateralValue = dsce.getAccountCollateralValue(user);
         uint256 expectedCollateralValue = dsce.getUsdValue(weth, AMOUNT_COLLATERAL);
         assertEq(collateralValue, expectedCollateralValue);
     }
@@ -123,5 +123,10 @@ contract DSCEngineTest is StdCheats, Test {
         uint256 expectedWeth = 0.05 ether; // this ether here is Ethereum ether
         uint256 amountWeth = dsce.getTokenAmountFromUsd(weth, 100 ether); // 100 ether here is $100 worth of the 1 - 1 stablecoins (called "ether" here) and this is not 100 ETH!!!!
         assertEq(amountWeth, expectedWeth);
+    }
+
+    // bigBagBoogy audit test:
+    function testCalculatesHealthFactorDevideByZero() public {
+        //
     }
 }
