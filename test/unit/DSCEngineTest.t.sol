@@ -126,7 +126,4 @@ contract DSCEngineTest is StdCheats, Test {
     }
 
     // bigBagBoogy audit test:
-    function testCalculatesHealthFactorDevideByZero() public {
-        //
-    }
 }
