@@ -6,6 +6,10 @@ git add .
 git commit -m "test added"
 git push -u origin main
 
+# todo: There's the function totalSupply() coming from IERC20.sol, but lets try to write it
+
+# ourselves.
+
 The keyboard shortcut to toggle word wrap is Alt+Z
 The keyboard shortcut to zoom is Ctrl+ + and/or Ctrl+ - (on the num-pad)
 
