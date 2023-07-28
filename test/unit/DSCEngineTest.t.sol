@@ -42,12 +42,13 @@ contract DSCEngineTest is StdCheats, Test {
         // CEI Checks, Effects, Interactions
         // we have 15eth with a value of 30k
         // if we call the getUsdValue and pass it the token and amount, it should return 30k
-        uint256 expectedUsd = 30000e18; // 15* $2000 = 30.000 30000e18 in DCSE-WEI
+        uint256 expectedUsd = 30000e18; // 15* $2000 = 30.000 30000e18 in DCS-WEI
         uint256 actualUsd = dsce.getUsdValue(weth, ethAmount);
         console.log("amount of Ethereum-WEI:", ethAmount);
         console.log("actualUsd:", actualUsd);
         assertEq(expectedUsd, actualUsd);
     }
+
     /////////////////////////////////
     // deposit collateral Tests ////
     ///////////////////////////////
@@ -123,6 +124,7 @@ contract DSCEngineTest is StdCheats, Test {
         uint256 expectedWeth = 0.05 ether; // this ether here is Ethereum ether
         uint256 amountWeth = dsce.getTokenAmountFromUsd(weth, 100 ether); // 100 ether here is $100 worth of the 1 - 1 stablecoins (called "ether" here) and this is not 100 ETH!!!!
         assertEq(amountWeth, expectedWeth);
+        console.log("amountWeth:", amountWeth, "expectedWeth:", expectedWeth);
     }
 
     // bigBagBoogy audit test:
