@@ -38,12 +38,14 @@ contract InvariantsTest is StdInvariant, Test {
         uint256 totalWbtcDeposited = IERC20(wbtc).balanceOf(address(dsce));
         uint256 wethValue = dsce.getUsdValue(weth, totalWethDeposited);
         uint256 wbtcValue = dsce.getUsdValue(wbtc, totalWbtcDeposited);
+        uint256 amountRedeemed = dsce.getUsdValue(weth, totalWethDeposited + totalWbtcDeposited);
 
         console.log("totalSupply:", totalSupply);
         console.log("totalWethDeposited:", totalWethDeposited);
         console.log("totalWbtcDeposited:", totalWbtcDeposited);
         console.log("wethValue:", wethValue);
         console.log("wbtcValue:", wbtcValue);
+        console.log("amountRedeemed:", amountRedeemed);
 
         assert(wethValue + wbtcValue >= totalSupply);
     }
