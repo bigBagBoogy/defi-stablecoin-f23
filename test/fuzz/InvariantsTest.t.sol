@@ -27,8 +27,9 @@ contract InvariantsTest is StdInvariant, Test {
     function setUp() external {
         deployer = new DeployDSC(); // we run the deploy script which will run the HelperConfig(), DecentralizedStableCoin(), and the DSCEngine().
         (dsc, dsce, helperConfig) = deployer.run(); //running deploy will return (dsc, dsce, helperConfig) objects. (DecentralizedStableCoin, DSCEngine, HelperConfig)
-        targetContract(address(handler));
         (ethUsdPriceFeed,, weth, wbtc,) = helperConfig.activeNetworkConfig();
+        handler = new Handler(dsce, dsc);
+        targetContract(address(handler));
     }
 
     function invariant_ProtocolMustHaveMoreThanTotalSupply() public view {

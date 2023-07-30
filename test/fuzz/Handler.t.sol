@@ -21,7 +21,8 @@ contract Handler is Test {
         dsc = _dsc;
     }
 
-    function depositCollateral(uint256 collateralSeed, uint256 amountCollateral) public {
-        dsce.depositCollateral(collateralSeed, amountCollateral);
+    function depositCollateral(address collateral, uint256 amountCollateral) public {
+        dsce.depositCollateral(collateral, amountCollateral);
     }
+    //uint256 collateralSeed
 }
